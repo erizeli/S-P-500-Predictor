@@ -1,0 +1,76 @@
+\documentclass[11pt]{article}
+\usepackage[margin=0.75in]{geometry}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\usepackage{titlesec}
+
+\titlespacing*{\section}{0pt}{10pt}{4pt}
+\titlespacing*{\subsection}{0pt}{6pt}{2pt}
+\setlength{\parskip}{2pt}
+\setlength{\parindent}{0pt}
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{center}
+    {\Large \textbf{S\&P 500 Market Direction Predictor --- Midpoint Progress Report}} \\[6pt]
+    {\normalsize Eric Liu, Rithikesh Muddana \quad | \quad EE 344 Final Project \quad | \quad March 2026}
+\end{center}
+
+\vspace{4pt}
+\hrule
+\vspace{8pt}
+
+\section*{GitHub Repository}
+
+\url{https://github.com/erizeli/S-P-500-Predictor}
+
+\section*{Progress Summary}
+
+\subsection*{Data Collection \& Preprocessing}
+\begin{itemize}[nosep, leftmargin=1.2em]
+    \item Collected four datasets: S\&P 500 daily OHLC (Yahoo Finance), CBOE VIX, 10-Year Treasury Yield, and Unemployment Rate (FRED)
+    \item Merged all sources into a single time-indexed DataFrame (993 trading days, Jan 2022 -- Dec 2025)
+    \item Handled frequency mismatch: forward-filled monthly unemployment data using ``latest known value'' rule to prevent look-ahead bias
+    \item Cleaned missing values (forward-fill for Treasury gaps) and winsorized outliers at 1st/99th percentiles
+\end{itemize}
+
+\subsection*{Feature Engineering}
+\begin{itemize}[nosep, leftmargin=1.2em]
+    \item Engineered 30+ features: multi-horizon returns (1d--20d), 5 lagged returns, rolling volatility (5d/20d + ratio), 5 SMAs with crossover ratios, RSI-14, MACD (line + signal + histogram), Bollinger Band \%B and width, intraday range features
+    \item Defined binary target: 1 if next-day close $>$ today's close, 0 otherwise
+    \item All features use only backward-looking data --- no future information leakage
+\end{itemize}
+
+\subsection*{Exploratory Data Analysis}
+\begin{itemize}[nosep, leftmargin=1.2em]
+    \item Class balance: 528 up days (53.2\%) vs.\ 465 down days (46.8\%) --- slight imbalance but manageable
+    \item Correlation analysis: individual features weakly correlated with target (max $|r| \approx 0.08$), confirming task difficulty
+    \item Visualized time series, correlation heatmap, and feature distributions conditioned on target class
+\end{itemize}
+
+\subsection*{Model Implementation \& Evaluation}
+\begin{itemize}[nosep, leftmargin=1.2em]
+    \item Chronological train/val/test split (no random shuffling): Train (416 samples, before Jul 2024), Val (128, Jul--Dec 2024), Test (250, 2025)
+    \item Implemented 3 baselines: Always-Up (Acc: 57.6\%), Same-as-Yesterday (50.4\%), Return-Only Logistic (53.2\%)
+    \item Trained 4 ML models: Logistic Regression (Acc: 57.2\%, AUC: 0.451), Random Forest (52.4\%, 0.488), Gradient Boosting (54.8\%, \textbf{AUC: 0.517}), Neural Network MLP (55.2\%, 0.449)
+    \item Hyperparameter tuning via walk-forward cross-validation (5-fold TimeSeriesSplit); best config: GB with n\_est=100, depth=3, lr=0.01 (mean F1 = 0.568 $\pm$ 0.101)
+    \item Full evaluation metrics computed: accuracy, F1, precision, recall, ROC-AUC, confusion matrices
+    \item ROC curves, feature importance plots, and model comparison visualizations completed
+\end{itemize}
+
+\subsection*{Error Analysis}
+\begin{itemize}[nosep, leftmargin=1.2em]
+    \item Regime analysis: model performs better during high-VIX periods (58.4\% acc) vs.\ low-VIX (46.4\%), and during downtrends (58.7\%) vs.\ uptrends (50.3\%)
+    \item Monthly accuracy breakdown and prediction timeline visualizations completed
+\end{itemize}
+
+\subsection*{Challenges Encountered}
+\begin{itemize}[nosep, leftmargin=1.2em]
+    \item Small dataset (794 usable samples after 200-day SMA warmup) limits model complexity --- the neural network likely underfits
+    \item Many models collapse toward ``always predict up'' due to the class imbalance, inflating F1/recall while precision stays low
+    \item Daily market noise makes the task inherently hard --- even the best model (GB) only marginally exceeds random chance on ROC-AUC (0.517 vs.\ 0.500)
+    \item Walk-forward CV shows high variance across folds ($\pm$0.10 std), indicating learned signals are unstable across time periods
+\end{itemize}
+
+\end{document}
